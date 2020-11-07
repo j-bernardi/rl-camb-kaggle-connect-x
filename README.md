@@ -11,9 +11,8 @@ A conda environment is available which includes the Kaggle Connect-X RL environm
 - pytorch
 - numpy
 - scipy
+- gym
 - kaggle-environments==0.1.6 (more recent versions threw an error when importing `kaggle_environments`
-
-OpenAI's `gym` module was originally allowed, but is currently omitted from the env until required. 
 
 To get the conda environment that allows you to use the kaggle environment, follow these steps. Check out README.md in `conda_envs` for more information on downloading `anaconda` before doing the below, if you don't have it already.
 

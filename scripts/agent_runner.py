@@ -33,8 +33,9 @@ def parse():
         description="Loads two or one agents and runs "
                     "against the negamax agent or each other"
     )
-    # TODO: possibly enforce agent_function_name?
-    parser.add_argument("agent_file1")
+    parser.add_argument(
+        "agent_file1", 
+        help="Must include encapsulating function 'my_agent(obs, config)'")
     parser.add_argument("agent_file2", default="negamax", nargs="?")
 
     return parser.parse_args()

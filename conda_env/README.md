@@ -4,9 +4,7 @@ Kaggle say:
 
 > Only the following can be imported: Python Standard Library Modules, gym, numpy, scipy, pytorch (1.3.1, cpu only), and more may be added later.
 
-So these I have installed (conda install pytorch)
-
-EXCLUDING: pip install gym - not sure what this will be for, yet
+So these I have installed (conda install pytorch, pip install gym, rest come along with those requirements)
 
 ## 1. Get anaconda
 

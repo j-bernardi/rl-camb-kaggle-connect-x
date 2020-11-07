@@ -39,9 +39,13 @@ dependencies:
   - zlib=1.2.11=h7b6447c_3
   - pip:
     - attrs==20.3.0
+    - cloudpickle==1.6.0
+    - future==0.18.2
+    - gym==0.17.3
     - importlib-metadata==2.0.0
     - jsonschema==3.2.0
     - kaggle-environments==0.1.6
+    - pyglet==1.5.0
     - pyrsistent==0.17.3
     - zipp==3.4.0
-prefix: /home/james/anaconda3/envs/commonKaggle
+prefix: /home/james/anaconda3/envs/common
