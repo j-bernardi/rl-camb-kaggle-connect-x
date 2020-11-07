@@ -28,6 +28,7 @@ cd ..
 
 After setting up the environment, try:
 ```bash
+source setup_python_path.sh
 python check_run.py
 ```
 
