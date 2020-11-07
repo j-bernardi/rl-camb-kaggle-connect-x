@@ -6,29 +6,34 @@ This is a repository for members of the Cambridge (UK) Reinforcement Learning Me
 
 ### Environment
 
-A conda environment is available which includes: the environment, and all modules that were available in the original competition. That is:
-- Python standard libraries (py3.6)
+A conda environment is available which includes the Kaggle Connect-X RL environment and all modules that were available in the original competition:
+- Python standard libraries (python 3.6)
 - pytorch
 - numpy
 - scipy
+- kaggle-environments==0.1.6 (more recent versions threw an error when importing `kaggle_environments`
 
-OpenAI's gym module was originally allowed, but is currently omitted from the env until required. Check out README.md in `conda_envs` for more information on downloading anaconda, if you don't have it already.
+OpenAI's `gym` module was originally allowed, but is currently omitted from the env until required. 
 
-To get the conda environment that allows you to use the kaggle environment:
+To get the conda environment that allows you to use the kaggle environment, follow these steps. Check out README.md in `conda_envs` for more information on downloading `anaconda` before doing the below, if you don't have it already.
 
-`cd conda_env`
-`conda create -f conda_env.yml`
-`conda activate common`
+```bash
+cd conda_env
+conda create -f conda_env.yml
+conda activate common
+cd ..
+```
 
 ### Getting started
 
-The `check_run.py` script checks that your environment is functioning with the environment correctly, and gives key examples on how to interact with the python code and get started.
+After setting up the environment, try:
+```bash
+python check_run.py
+```
 
-It is a copy-paste of the codeblocks available in the notebook:
+The `check_run.py` script checks that your environment is functioning with the environment correctly, and gives key examples on how to interact with the python code and get started. It is largely a copy-paste of the codeblocks available in the notebook: https://www.kaggle.com/ajeffries/connectx-getting-started
 
-https://www.kaggle.com/ajeffries/connectx-getting-started
-
-## The competition
+## Competing
 
 Envisioning everyone makes their own agents and we compete!
 
