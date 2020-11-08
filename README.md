@@ -35,9 +35,17 @@ The `check_run.py` script checks that your environment is functioning with the e
 
 ## Competing
 
-Envisioning everyone makes their own agents and we compete!
+We can use this environment to compete between agents! If you have an agent that is in submittable format, we can compete. Submittable format means to have an entirely encapsulated function called `my_agent(observation, configuration)`. This is verified with `scripts/agent_runner my_agent_file.py`, or by jumping straight in and trying the below:
 
-TODO: create a file / env that will play agents against each other
+```bash
+scripts/evaluate_agents.py agent1_file.py [agent2_file.py negamax random]
+```
 
-TODO: create a leaderboard
+`example_submission/` shows the example agent and the example code used to create the submittable file (reproduced in `scripts/submit_agent.py`), as-provided by Kaggle.
 
+`q_learning/` has an example written by the repo author that is runnable with the `evaluate_agents.py` script, but I have not yet verified that it will be runnable in a proper kaggle submission (the main uncertainty is whether the model state dict .pt file is submittable, as I have seen some examples where the state dict is written out as a variable within the function. I hope this won't be necessary, as it seems like a big pain!
+
+# Leaderboard
+Negamax (Kaggle) vs `q_learning` (j-bernardi): 0.0 : 1.0
+
+^ Should be easy to beat me!
