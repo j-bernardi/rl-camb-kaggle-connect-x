@@ -4,7 +4,12 @@ import argparse
 
 import kaggle_environments as ke
 
-from utils.utils import run_agent_game, load_agent
+try:
+    from utils.utils import run_agent_game, load_agent
+except ModuleNotFoundError as mnfe:
+    raise ModuleNotFoundError(
+        f"{mnfe}\nDid you run source set_python_path.sh?"
+)
 
 
 def run_main(agent_file1, agent_file2):

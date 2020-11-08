@@ -7,8 +7,13 @@ import argparse
 
 import kaggle_environments as ke
 
-from utils.utils import (
-    run_agent_game, write_agent_to_file, load_agent
+try:
+    from utils.utils import (
+        run_agent_game, write_agent_to_file, load_agent
+    )
+except ModuleNotFoundError as mnfe:
+    raise ModuleNotFoundError(
+        f"{mnfe}\nDid you run source set_python_path.sh?"
 )
 
 
@@ -17,6 +22,9 @@ def run_main(agent_file, outfile, force=False):
 
     To create the submission, an agent function should be 
     fully encapsulated (no external dependencies).
+
+    CAVEAT: Probably not powerful enough to save any decent
+        agents. Best to write your own model.
 
     Args: 
 
@@ -71,6 +79,8 @@ def run_main(agent_file, outfile, force=False):
         print(f"{env.state[0].status}\n{env.state[1].status}")
 
 
+# TODO - needs to add more, like FFDNN definiton.
+# Just let people make their own submission file?
 def extract_function_code(agent_file: str):
     """Imports the agent function my_agent from the given file
 

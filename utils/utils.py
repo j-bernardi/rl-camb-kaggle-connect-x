@@ -1,5 +1,6 @@
 import sys
 import inspect
+import numpy as np
 
 import kaggle_environments as ke
 
@@ -12,10 +13,28 @@ def run_agent_game(env, agent1, agent2, render=True):
     TODO: args
 
     """
-
+    print("Running")
     env.run([agent1, agent2])
     if render:
-        env.render(mode="ipython", width=500, height=450)  # TODO run in ipython or another render
+        print("Rendering")
+        env.render(mode="ansi", width=500, height=450)  # TODO run in ipython or another render
+
+
+def compare_agents(env, agent1, agent2, num_episodes=10):
+    rewards = ke.evaluate(
+        "connectx", [agent1, agent2], num_episodes=num_episodes)
+    try:
+        mean_rewards = np.mean(rewards, axis=0)
+    except TypeError as te:
+        raise TypeError(
+            f"{te}None-reward likely means your submission"
+            f" file isn't runnable i.e. has an error in it."
+        )
+    print(
+        "mean reward of agent1 vs agent2:",
+        mean_rewards[0], ":", mean_rewards[1]
+    )
+    return mean_rewards
 
 
 def write_agent_to_file(function, outfile):

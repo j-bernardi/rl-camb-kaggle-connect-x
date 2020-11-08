@@ -57,7 +57,7 @@ def do_testing(env, agent1, agent2="random", render=True):
     env.reset()
     env.run([agent1, agent2])
     if render:
-        env.render(mode="ipython", width=500, height=450)  # TODO run in ipython or another render
+        env.render(mode="ansi", width=500, height=450)  # TODO run in ipython or another render
 
 
 def do_training_episode(agent, trainer, render=True):
@@ -68,7 +68,7 @@ def do_training_episode(agent, trainer, render=True):
         obs, reward, done, info = trainer.step(my_action)
         rewards.append(reward)
         if render:
-            env.render(mode="ipython", width=100, height=90, header=False, controls=False)
+            env.render(mode="ansi", width=100, height=90, header=False, controls=False)
 
         ### TRAINING STEPS GO HERE ###
     env.render()  # final state
@@ -89,7 +89,7 @@ if __name__ == "__main__":
     print("Run trained agent")
     # Run trained agent against random
     env.run([my_agent, "random"])
-    env.render(mode="ipython", width=500, height=450)
+    env.render(mode="ansi", width=500, height=450)
 
     # Interactive play against an agent
     # Insert your agent as player 2
