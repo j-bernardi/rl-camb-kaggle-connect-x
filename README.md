@@ -35,7 +35,11 @@ The `check_run.py` script checks that your environment is functioning with the e
 
 ## Competing
 
-We can use this environment to compete between agents! If you have an agent that is in submittable format, we can compete. Submittable format means to have an entirely encapsulated function called `my_agent(observation, configuration)`. This is verified with `scripts/agent_runner my_agent_file.py`, or by jumping straight in and trying the below:
+As per the competition rules below, it's recommended you don't share your code if you're planning to compete in the Kaggle Competition "unless it's made available at no cost via the official competition forums" (see link below). I'm not totally sure that's the meaning of the rule, but that seems lik the safest interpretation. 
+
+https://www.kaggle.com/c/connectx/rules
+
+Now the rules bit is over... We can use this environment to compete between our own agents! If you have an agent that is in submittable format, we can compete. Submittable format means to have an entirely encapsulated function called `my_agent(observation, configuration)`. This is verified with `scripts/agent_runner my_agent_file.py`, or by jumping straight in and trying the below:
 
 ```bash
 scripts/evaluate_agents.py agent1_file.py [agent2_file.py negamax random]
