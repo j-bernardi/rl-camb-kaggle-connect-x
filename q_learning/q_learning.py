@@ -4,6 +4,7 @@ import torch as tc
 import torch.nn as nn
 
 import kaggle_environments as ke
+from utils.env_wrapper import ConnectX
 
 
 class FFDNN(nn.Module):
@@ -24,10 +25,10 @@ class FFDNN(nn.Module):
 class DeepQLearner:
     """The trainer, to be serialised"""
 
-    def __init__(self, env, discount=0.9, learning_rate=1.0):
+    def __init__(self, env_wrapper, discount=0.9, learning_rate=1.0):
 
         print(f"Creating agent with {env.configuration}")
-        self.env = env
+        self.connectx = env_wrapper
         self.square_options = 3  # empty, player 1, player2
         self.action_range = env.configuration.columns
 
@@ -45,11 +46,11 @@ class DeepQLearner:
             self.model.parameters(), lr=self.learning_rate)
 
     def do_training_episode(self, render=True):
-        trainer = self.env.train([None, "random"])
+        trainer = self.connectx.env.train([None, "random"])
         obs = trainer.reset()
 
         rewards = []
-        while not env.done:
+        while not self.connectx.env.done:
             state_tensor = tc.as_tensor(np.expand_dims(obs.board, 0), dtype=tc.float)
             action_predictions = self.model(state_tensor)
 
@@ -58,12 +59,12 @@ class DeepQLearner:
             less_than_min_value = tc.min(action_predictions) - 1.
             non_full_columns = tc.where(
                 tc.tensor(  # where col is not full
-                    obs.board[:self.env.configuration["columns"]]) == 0,
+                    obs.board[:self.connectx.configuration["columns"]]) == 0,
                 action_predictions,
                 less_than_min_value  # avoid selection if col is full
             )
 
-            if not env.done:
+            if not self.connectx.env.done:
                 action = tc.argmax(non_full_columns, dim=-1)
                 next_obs, reward, done, info = trainer.step(int(action))
                 rewards.append(reward)
@@ -130,7 +131,7 @@ class DeepQLearner:
 if __name__ == "__main__":
 
     # View init
-    env = ke.make("connectx")  # , {"rows": 4, "columns": 4}, debug=True)
+    env = ConnectX()  # , {"rows": 4, "columns": 4}, debug=True)
     env.render()
     agent = DeepQLearner(env)
 
