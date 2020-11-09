@@ -10,7 +10,14 @@ def run_agent_game(env, agent1, agent2, render=True):
     
     NOTE: env.reset() required if running fresh
 
-    TODO: args
+    Args:
+        env: the kaggle_environments-made env to run in
+        agent1 (str|kaggle): either a Kaggle standard agent 
+            loaded with load_agent or a path to your own 
+            custom agent
+        agent2 (str|kaggle): as above, to compete with agent1
+        render:
+            whether to print ascii game to stdout
 
     """
     print("Running")
@@ -21,6 +28,15 @@ def run_agent_game(env, agent1, agent2, render=True):
 
 
 def compare_agents(env, agent1, agent2, num_episodes=10):
+    """
+    Args:
+        env: the kaggle_environments-made env to run in
+        agent1 (str|kaggle): either a Kaggle standard agent 
+            loaded with load_agent or a path to your own 
+            custom agent
+        agent2 (str): as above, to compete with agent1
+        num_episodes: How many times to average the game over
+    """
     rewards = ke.evaluate(
         "connectx", [agent1, agent2], num_episodes=num_episodes)
     try:
@@ -40,7 +56,11 @@ def compare_agents(env, agent1, agent2, num_episodes=10):
 def write_agent_to_file(function, outfile):
     """Overwrites a file with a submitted access function
 
-    TODO: args
+    Args:
+        function: the name of the function to extract the
+            source code of. Self-contained action taker with
+            args observation, configuration (from kaggle env.)
+        outfile: where to save the extracted code to
 
     """
     source_code = inspect.getsource(function)
@@ -57,7 +77,7 @@ def load_agent(agent_file: str):
             (e.g. one saved with write_agent_to_file)
 
     Returns:
-        TODO what is the type?
+        A kaggle-runnable agent
     """
     out = sys.stdout  # apparently needed as a "workaround"
     submission = ke.utils.read_file(agent_file)
