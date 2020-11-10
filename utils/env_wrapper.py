@@ -8,10 +8,13 @@ class ConnectX(gym.Env):
     https://www.kaggle.com/phunghieu/connectx-with-deep-q-learning
     """
 
-    def __init__(self, debug=False):
+    def __init__(self, score_target=80, out_of=100, debug=False):
         # Set the env
+        # score target = won of last out_of
         self.env = ke.make("connectx", debug=debug)
         self.configuration = self.env.configuration
+        self.score_target = score_target
+        self.out_of = out_of
         
         # Training config
         self.pair = [None, "random"]
@@ -20,6 +23,7 @@ class ConnectX(gym.Env):
         # Define required gym fields (examples):
         self.action_space = gym.spaces.Discrete(
             self.configuration.columns)
+
         self.observation_space = gym.spaces.Discrete(
             self.configuration.columns * self.configuration.rows)
 

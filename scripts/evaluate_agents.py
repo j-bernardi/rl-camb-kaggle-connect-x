@@ -48,23 +48,19 @@ def run_main(agent_file1, agent_file2, num_episodes):
     
     print("Make env")
     env = ke.make("connectx", debug=True)
-    env.render()
-    
     env.reset()
-
-    print("Run a single game (test, not recorded)")
+    print("Run a single game against random (test, not recorded)")
     run_agent_game(env, agent1, "random", render=True)
-    env.render()
     print(
-        "\n***If there was an error, script won't fail here"
-        "but agent is likely kaput.***\n"
+        "\nNote: If there was an error in running above,\n script"
+        " probably won't fail but agent is likely kaput.\n"
     )
-    
-    print("Do evaluation")
+
+    print("Do the full evaluation vs agent2")
     env.reset()
     mean_scores = compare_agents(
-    	env, agent1, agent2, num_episodes=num_episodes)
-    print("Complete")
+    	env, agent1, agent2, num_episodes=num_episodes
+    )
 
 
 if __name__ == "__main__":

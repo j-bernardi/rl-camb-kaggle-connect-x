@@ -30,7 +30,7 @@ def run_main(agent_file1, agent_file2):
 
     env = ke.make("connectx")
     env.reset()
-    run_agent_game(env, agent1, agent2)
+    run_agent_game(env, agent1, agent2, render=True)
 
 
 def parse():

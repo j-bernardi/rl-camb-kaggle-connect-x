@@ -61,9 +61,9 @@ def my_agent(observation, configuration):
         example_env = ke.make("connectx")  # , {"rows": 4, "columns": 4})
         # model = tc.load("model.pt")
         model = FFDNN(
-            example_env.configuration["rows"] 
-                * example_env.configuration["columns"], 
-            example_env.configuration["columns"]
+            example_env.configuration.rows 
+                * example_env.configuration.columns, 
+            example_env.configuration.columns
         )
         model.load_state_dict(tc.load(path))
         model.eval()
@@ -83,7 +83,7 @@ def my_agent(observation, configuration):
     less_than_min_value = tc.min(action_predictions) - 1.
     non_full_columns = tc.where(
         tc.tensor(  # where col is not full
-            observation.board[:configuration["columns"]]) == 0,
+            observation.board[:configuration.columns]) == 0,
         action_predictions,
         less_than_min_value  # avoid selection if col is full
     )

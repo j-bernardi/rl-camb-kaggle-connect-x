@@ -1,8 +1,16 @@
 import sys
 import inspect
 import numpy as np
-
+import argparse
 import kaggle_environments as ke
+
+
+class MyParser(argparse.ArgumentParser):
+    
+    def error(self, message):
+        sys.stderr.write('error: {}\n'.format(message))
+        self.print_help()
+        sys.exit(2)
 
 
 def run_agent_game(env, agent1, agent2, render=True):
@@ -20,11 +28,13 @@ def run_agent_game(env, agent1, agent2, render=True):
             whether to print ascii game to stdout
 
     """
+    env.render()
+    # TODO - we'd like to view! With a sleep...
     print("Running")
     env.run([agent1, agent2])
     if render:
         print("Rendering")
-        env.render(mode="ansi", width=500, height=450)  # TODO run in ipython or another render
+        env.render()
 
 
 def compare_agents(env, agent1, agent2, num_episodes=10):
@@ -79,8 +89,17 @@ def load_agent(agent_file: str):
     Returns:
         A kaggle-runnable agent
     """
-    out = sys.stdout  # apparently needed as a "workaround"
+    # out = sys.stdout  # apparently needed as a "workaround"
     submission = ke.utils.read_file(agent_file)
+    assert submission
     loaded_agent = ke.utils.get_last_callable(submission)
-    sys.stdout = out
+    # sys.stdout = out
+    
+    # DEBUG
+    env = ke.make("connectx")
+    test_state = env.reset()[0]['observation']
+    action = loaded_agent(test_state, env.configuration)
+    assert isinstance(action, int)
+    #####
+
     return loaded_agent
