@@ -1,4 +1,5 @@
 import gym
+import numpy as np
 import kaggle_environments as ke
 
 class ConnectX(gym.Env):
@@ -26,6 +27,36 @@ class ConnectX(gym.Env):
 
         self.observation_space = gym.spaces.Discrete(
             self.configuration.columns * self.configuration.rows)
+
+    def check_if_solved(self, game_scores):
+        """Define the winning condition, for the agent.
+
+        Figure out if you've won enough games out of the last
+        self.out_of games to constitute .
+
+        Returns:
+            solved: whether the agent has (robustly) won
+            score_dict: a collection of the last self.out_of
+                games' outcomes
+        """
+        vals = np.array(self.env.specification.reward.enum).astype(float)
+
+        if len(game_scores) > self.out_of:
+
+            score_vals, counts = np.unique(
+                game_scores[-self.out_of:], return_counts=True
+            )
+            # Ensure game scores are consistent
+            # If draws are present, they are all floats
+            score_vals = np.round(score_vals.astype(float), 1)
+            assert all(v in vals for v in score_vals)
+            score_dict = dict(zip(score_vals, counts))
+            solved = score_dict[1.0] > self.env_wrapper.score_target
+        else:
+            score_dict = None
+            solved = False
+
+        return solved, score_dict
 
     def switch_trainer(self, switch_to):
         """
