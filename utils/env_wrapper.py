@@ -30,6 +30,7 @@ class ConnectX(gym.Env):
         
         # Training config
         self.pair = [None, "random"]
+        self.agent_position = 0
         self.trainer = self.env.train(self.pair)
 
         # Define required gym fields (examples):
@@ -96,14 +97,35 @@ class ConnectX(gym.Env):
         self-implemented agent. E.g.
             "negamax"
             "my_agent.py"
+
+        Sets trainer so that agent is playing FIRST
         """
-        self.pair[1] = switch_to
+        self.pair = [None, switch_to]
+        self.agent_position = 0
+
+        self.trainer = self.env.train(self.pair)
+
+    def switch_agent_play_order(self):
+        """
+        Set up the trainer so that pair[1] plays first.
+        This is opposite to the default.
+        """
+        self.pair = list(reversed(self.pair))
+        self.agent_position = 1 if self.agent_position == 0 else 0
+
+        # Double check logic!
+        assert self.pair.index(None) == self.agent_position
+
         self.trainer = self.env.train(self.pair)
 
     def step_trainer(self, action):
         return self.trainer.step(action)
     
-    def reset_trainer(self):
+    def reset_trainer(self, switch_player_probability=0.5):
+        """Start a fresh env with a chance to switch the order of play
+        """
+        if np.random.rand() <= switch_player_probability:
+            self.switch_agent_play_order()
         return self.trainer.reset()
     
     def render(self, **kwargs):
