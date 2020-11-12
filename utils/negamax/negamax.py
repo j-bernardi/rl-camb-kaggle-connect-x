@@ -1,17 +1,16 @@
 """
 The negamax agent from the kaggle source code.
-Runs faster if we turn down max_depth (originally 4).
+Runs faster if we turn down max_depth (originally 4, but too slow).
 """
 
-
-def negamax_agent(obs, config):
+def negamax_agent(obs, config, depth=2):
     columns = config.columns
     rows = config.rows
     size = rows * columns
     EMPTY = 0
 
     # Due to compute/time constraints the tree depth must be limited.
-    max_depth = 2  # 4
+    max_depth = depth
 
     def is_win(board, column, mark, config, has_played=True):
         columns = config.columns
