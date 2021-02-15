@@ -1,7 +1,7 @@
 import numpy as np
 import kaggle_environments as ke
 
-from alpha_go.alphazero import StateStack2
+from alpha_zero.alphazero import StateStack2
 
 
 def test_state_stack():
