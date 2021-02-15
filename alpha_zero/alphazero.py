@@ -80,8 +80,9 @@ class StateStack2():
 
         # TODO should configure with num rows etc
         self.env = ke.make("connectx")
-        self.config = self.env.configuration
         obs = self.env.reset()
+
+        self.config = self.env.configuration
 
         self.num_rows = num_rows
         self.num_cols = num_cols
@@ -101,10 +102,10 @@ class StateStack2():
             self.init_first_empty_row()
 
         print("LATEST ENV", self.env)
-        import pprint
-        pprint.pprint(self.env.specification.observation)
-        pprint.pprint(self.env.specification.configuration)
-        pprint.pprint(self.env.specification.action)
+        # import pprint
+        # pprint.pprint(self.env.specification.observation)
+        # pprint.pprint(self.env.specification.configuration)
+        # pprint.pprint(self.env.specification.action)
 
         print("EXAMPLE OBS")
         print(obs)
@@ -116,16 +117,16 @@ class StateStack2():
     def shared_step(self, player, action):
         if not np.all(self.stack[:, :, -1] == player):
             raise ValueError(
-                f"Next to play {self.stack[:, :, -1]} != {player}")
+                f"Next to play (all) {self.stack[:, :, -1]} != {player}")
         if self.env.state[player]["status"] == "INACTIVE":
             raise ValueError(
                 f"Unexpected usage - must be for next player: {player}")
 
-        print("Playing", player, "action", action)
+        print("Playing", player, "action", action, type(action))
         if player == 0:
-            act = [action, None]
+            act = [int(action), None]
         elif player == 1:
-            act = [None, action]
+            act = [None, int(action)]
         else:
             raise ValueError(f"2 players only! {player}")
 
@@ -133,20 +134,9 @@ class StateStack2():
 
     # TODO two step functions are same except self. becomes hypothetical
     # Perhaps class function?
-
-    # TODO could possibly speed up
     def init_first_empty_row(self):
-        # Fill in first_empty_row
-        for col in range(self.stack.shape[0]):
-            row = state[col, :, 0] # + state[col, :, first_empty_row]
-            empty_positions = [i for i, c in enumerate(row) if c == 0]
-
-            if empty_positions:
-                first_empty_row[col] = empty_positions[-1]
-            else:
-                # full
-                first_empty_row[col] = state.shape[1]
-        self.first_empty_row = first_empty_row
+        curr_state = self.get_current_state()
+        self.first_empty_row = np.sum(curr_state != 0, axis=0)
 
     def hypothetical_step(self, player, action):
 
@@ -211,6 +201,8 @@ class StateStack2():
         if self.env.state[player]["status"] == "DONE":
             assert self.env.state[(player + 1) % 2]["status"] == "DONE"
 
+        reward = self.env.state[player]["reward"]
+
         print("NEW OBS, done:", done)
         new_obs_as_grid = self.obs_to_grid(new_obs[0]["observation"]["board"])
         print(new_obs_as_grid)
@@ -238,7 +230,7 @@ class StateStack2():
         self.stack[:, :, -1] = (self.stack[0, 0:, -1] + 1) % 2
         self.first_empty_row[action] += 1
 
-        return done
+        return done, reward
 
     def obs_to_grid(self, arr):
         return np.reshape(
@@ -400,8 +392,10 @@ class AlphaGo():
                 # TODO verify
                 simulation_head.W += value.numpy()[0]
 
+                # TODO - what's broken here
                 next_state, finished = state_obj.hypothetical_step(
                     player=player, action=action_i)
+
                 print("NEXT", next_state)
                 print("FINISHED", finished)
                 # state_obj.is_finished()
@@ -458,18 +452,19 @@ class AlphaGo():
         # Trainer keeps the state of the EPISODE against adversary
         # TODO - one day train_against will have to be self!
         player = 0
-        trainer = self.connectx.env.train([None, train_against])
+        # trainer = self.connectx.env.train([None, train_against])
 
         for game_idx in range(self.self_play_iterations):
             print("Game", game_idx)
-            obs = trainer.reset()
+            # obs = trainer.reset()
             # game_rewards = []
 
             # State of the EPISODE as numpy array
-            state = self.obs_to_grid(tc.tensor(obs.board))
+            # state = self.obs_to_grid(tc.tensor(obs.board))
 
             # Create a state stack object for this game - stores history for
             # actions
+            # TODO just reset rather than new?
             game_state_stack = StateStack2(
                 num_rows=self.config.rows, 
                 num_cols=self.config.columns
@@ -479,40 +474,96 @@ class AlphaGo():
             done = False
             stp = 0
             while not done:
-                current_state = game_state_stack.stack
+                # TODO copy is temp for testing after act
+                init_state = game_state_stack.stack
+                init_state_copy = game_state_stack.stack.copy()
+
                 try:
+                    assert game_state_stack.stack[0, 0, -1] == player
                     action, search_probs = self.act(game_state_stack)
                 except TypeError as te:
                     env.render()
                     print("Not updated^")
                     raise te
+                except Exception as e:
+                    print("Failed", game_idx, stp)
+                    raise e
 
-                # Next obs, info not needed
-                next_obs, reward, done, _ = trainer.step(int(action))
+                state_after_act = game_state_stack.stack
+                assert np.all(state_after_act == init_state)
+                assert np.all(init_state == init_state_copy)
 
-                # game_rewards.append(reward)
-                self.memory.append(
-                    (current_state, search_probs, reward))
+                # Update the stack to keep the history
+                print("Player", player, "playing", action)
+                print("BEFORE\n", game_state_stack.get_current_state())
+                done, reward = game_state_stack.step(player=player, action=action)
 
-                if reward is None:
+                def diagnose_env():
                     # DIAGNOSE
-                    print("Rendering")
+                    print("Rendering for reward", reward, type(reward))
                     env.render()
                     print("action taken", action)
                     print("Done?", done)
                     sys.exit()
 
-                # Update the stack to keep the history
-                game_state_stack.step(player=player, action=action)
+                if reward == 1:
+                    reward = 1.
+                elif reward == 0.5:
+                    reward = 0.
+                elif reward == 0:
+                    reward = -1.
+                else:
+                    diagnose_env()
+
+                # player 2 plays - random
+                if not done:
+                    print("PLAYING PLAYER 2")
+                    # TODO - use train_against.act()
+                    valid_acts = [
+                        i for i, v in enumerate(
+                            game_state_stack.first_empty_row)
+                        if v < game_state_stack.num_rows
+                    ]
+                    done, p2_reward = game_state_stack.step(
+                        player=(player + 1) % 2,
+                        action=int(np.random.choice(valid_acts))
+                    )
+                    if p2_reward == 1:
+                        reward = -1.
+                    elif p2_reward == 0:
+                        reward = 1.
+                    elif p2_reward == 0.5:
+                        reward = 0.
+                    else:
+                        diagnose_env()
+
+                    assert game_state_stack.stack[0, 0, -1] == player
+
+                # TODO - act with the other player
+
+
+                # Next obs, info not needed
+                # , reward, done, _ = trainer.step(int(action))
+
+                # other_action = next_obs[(player + 1) % 2]["action"]
+                # print("NEW ACTION", other_action)
+                # print("NEXT", next_obs)
+
+                # game_rewards.append(reward)
+                self.memory.append((init_state, search_probs, reward))
+
 
                 # TODO current_state is not updating after step
                 print("CURRENT STATE", game_idx, stp)
                 print(game_state_stack.get_current_state())
-                print("ENV STATE")
-                new_grid = self.obs_to_grid(next_obs["board"])
-                print(new_grid)
-
-                assert np.all(game_state_stack.get_current_state() == next_obs)
+                # print("ENV STATE")
+                # new_grid = self.obs_to_grid(next_obs["board"])
+                # print(new_grid)
+                # assert np.all(
+                #     game_state_stack.get_current_state() == new_grid), (
+                #         f"current\n{game_state_stack.get_current_state()}\n"
+                #         f"trainer env\n{new_grid}"
+                #    )
                 stp += 1
 
             if render:
