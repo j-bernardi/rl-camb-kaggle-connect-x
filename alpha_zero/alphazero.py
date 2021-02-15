@@ -12,7 +12,7 @@ from utils.utils import compare_agents
 from utils.env_wrapper import ConnectX
 
 
-# TODO - they output a 19x19x1 for policy - prob of each square
+# They output a 19x19x1 for policy - prob of each square
 #  So I want prob of each column...
 # They do 40 residual layers followed by policy head, value head
 class FFDNN(nn.Module):
@@ -80,6 +80,7 @@ class StateStack2():
 
         # TODO should configure with num rows etc
         self.env = ke.make("connectx")
+
         obs = self.env.reset()
 
         self.config = self.env.configuration
@@ -101,28 +102,46 @@ class StateStack2():
             assert preload_state.shape == stack_shape
             self.init_first_empty_row()
 
-        print("LATEST ENV", self.env)
+            # self.load_state_into_env()
+
+        # print("LATEST ENV", self.env)
         # import pprint
         # pprint.pprint(self.env.specification.observation)
         # pprint.pprint(self.env.specification.configuration)
         # pprint.pprint(self.env.specification.action)
 
-        print("EXAMPLE OBS")
-        print(obs)
-        print("Reshape")
-        print(self.obs_to_grid(obs[0]["observation"]["board"]))
+        # print("EXAMPLE OBS")
+        # print(obs)
+        # print("Reshape")
+        # print(self.obs_to_grid(obs[0]["observation"]["board"]))
         assert obs[0]["observation"]["board"]\
             == obs[1]["observation"]["board"]
 
-    def shared_step(self, player, action):
-        if not np.all(self.stack[:, :, -1] == player):
-            raise ValueError(
-                f"Next to play (all) {self.stack[:, :, -1]} != {player}")
-        if self.env.state[player]["status"] == "INACTIVE":
-            raise ValueError(
-                f"Unexpected usage - must be for next player: {player}")
+    def load_state_into_env():
 
-        print("Playing", player, "action", action, type(action))
+        # list of player 0, 1
+        # {'action': 0, 'reward': 0.5, 'info': {}, 'observation': {
+        # 'board': [board 0, 1, 2], 'mark': 1}, 'status': 'ACTIVE'}
+        pass
+
+    def shared_step(self, player, action):
+
+        # print("current state, player", player)
+        # print(self.env.state[player]["status"])
+        p2 = (player + 1) % 2
+        # print("current state, player", p2)
+        # print(self.env.state[p2]["status"])
+
+
+        if not np.all(self.stack[:, :, -1] == player):
+            raise ValueError(f"Next {self.stack[:, :, -1]} != {player}")
+        if self.env.state[player]["status"] == "INACTIVE":
+            raise ValueError(f"Next player must be active: {player}")
+
+        if self.first_empty_row[action] >= self.num_rows:
+            raise ValueError(f"Action {action} for p{player+1} invalid")
+
+        # print("Playing", player, "action", action, type(action))
         if player == 0:
             act = [int(action), None]
         elif player == 1:
@@ -140,10 +159,12 @@ class StateStack2():
 
     def hypothetical_step(self, player, action):
 
-        act_tuple = self.shared_step(player, action)
-
         hypothetical_env = ke.make("connectx")
+        # print("SELF ENV", self.env.state)
         hypothetical_env.state = copy.deepcopy(self.env.state)
+        # print("HYPOTHETICAL STATE", hypothetical_env.state)
+
+        act_tuple = self.shared_step(player, action)
 
         new_obs = hypothetical_env.step(act_tuple)
         done = (
@@ -155,9 +176,9 @@ class StateStack2():
             assert hypothetical_env.state[
                 (player + 1) % 2]["status"] == "DONE"
 
-        print("NEW OBS hypothetical")
+        # print("NEW OBS hypothetical")
         new_obs_as_grid = self.obs_to_grid(new_obs[0]["observation"]["board"])
-        print(new_obs_as_grid)
+        # print(new_obs_as_grid)
 
         assert (
             new_obs[0]["observation"]["board"]
@@ -188,10 +209,12 @@ class StateStack2():
 
     def step(self, player, action):
         act_tuple = self.shared_step(player, action)
-        print("ACT TUPLE", act_tuple)
+        # print("ACT TUPLE", act_tuple)
         # TODO - this needs to be hypothetical
         # Make an env and replace the gameboard arrays with current...
+        # print("REAL STEP - before", self.env.state)
         new_obs = self.env.step(act_tuple)
+        # print("REAL STEP - after", self.env.state)
 
         done = (
             self.env.state[player]["status"] == "DONE"
@@ -203,9 +226,9 @@ class StateStack2():
 
         reward = self.env.state[player]["reward"]
 
-        print("NEW OBS, done:", done)
+        # print("NEW OBS, done:", done)
         new_obs_as_grid = self.obs_to_grid(new_obs[0]["observation"]["board"])
-        print(new_obs_as_grid)
+        # print(new_obs_as_grid)
         assert (
             new_obs[0]["observation"]["board"]
             == new_obs[1]["observation"]["board"])
@@ -227,8 +250,18 @@ class StateStack2():
         state_stack[:, :, 0] = np.where(
             new_obs_as_grid == player + 1, ones, zeros)
 
-        self.stack[:, :, -1] = (self.stack[0, 0:, -1] + 1) % 2
+        current_player = self.stack[0, 0, -1]
+        self.stack[:, :, -1] = (self.stack[0, 0, -1] + 1) % 2
+
+        if current_player == 1:
+            assert self.stack[0, 0, -1] == 0
+        else:
+            assert self.stack[0, 0, -1] == 1 and current_player == 0
+
         self.first_empty_row[action] += 1
+        cp = self.first_empty_row.copy()
+        self.init_first_empty_row()
+        assert np.all(cp == self.first_empty_row)
 
         return done, reward
 
@@ -288,7 +321,7 @@ class AlphaGo():
         depth = (self.move_history + 1) * 2 + 1
         self.model = FFDNN(self.state_shape + (depth,), self.action_space)
         init_state = StateStack2(*self.state_shape)
-        self.tree = Node(self.action_space, init_state)
+        # self.tree = Node(self.action_space, init_state)
         self.value_loss_f = nn.MSELoss()
         self.prob_loss_f = self.cross_entropy_from_logits  # nn.CrossEntropyLoss()
         self.optimizer = tc.optim.Adam(
@@ -307,7 +340,8 @@ class AlphaGo():
             (self.config.rows, self.config.columns)
         )
 
-    def act(self, training=True):
+    # TODO - value added to everything in the BRANCH
+    def act(self, current_stack, training=True):
         """
             state_stack (StateStack2):
 
@@ -318,33 +352,34 @@ class AlphaGo():
                 np.argwhere((first_empty < self.config.rows)),
                 -1
             )
-            print("Allowed idcs", allowed_action_idc)
+            # print("Allowed idcs", allowed_action_idc)
             if not np.any(allowed_action_idc):
-                print("RETURN NONE")
+                # print("RETURN NONE")
                 return None
-            print("ONE IS ALLOWED")
 
             allowed_vals = np.squeeze(val[allowed_action_idc])
-            print("Allowed actions", allowed_vals)
+            # print("Allowed actions", allowed_vals)
             a_map = {i: a for i, a in enumerate(allowed_action_idc)}
+            # print("Mapping dict", a_map)
             if stochastic:
                 # choose from distribution
                 valid_action =int(
                     np.random.choice(
-                        range(len(allowed_vals)), 1, p=val/np.sum(val)))
+                        range(len(allowed_vals)),
+                        p=allowed_vals/np.sum(allowed_vals)))
             else:
                 # choose argmax
                 valid_action = np.argmax(allowed_vals)
-            print("Action", valid_action, "->", a_map[valid_action])
+            # print("Action", valid_action, "->", a_map[valid_action])
             return a_map[valid_action]
 
         # TODO - state_obj needs to implement "finished"
-
+        markov_tree = Node(self.action_space, current_stack)
         # Do simulations from the current state
         for s in range(self.num_simulations):
             # Root node is the current game state
             # For now make a fresh tree
-            simulation_head = self.tree
+            simulation_head = markov_tree
             """
             ^^^^^^^^^^^^^^^^^^^^^^^^^^
             Need to figure out what "keep the subtree for
@@ -353,18 +388,19 @@ class AlphaGo():
             node for each simulation.
             >>>>>>>>>>>>>>>>>>>>>>>>>>>
             """
-            state_obj = simulation_head.state_stack
+            # state_obj = simulation_head.state_stack
             it = 0
             finished = False
             while not finished:
-                print("it", s, it); it += 1
+                # print("Simulation", s, "move", it)
+                it += 1
                 with tc.no_grad():
                     value, action_dist = self.model(
                         tc.reshape(
                             tc.tensor(
-                                state_obj.stack, dtype=tc.float32,
+                                simulation_head.state_stack.stack, dtype=tc.float32,
                                 requires_grad=False),
-                            (1,) + state_obj.stack.shape)
+                            (1,) + simulation_head.state_stack.stack.shape)
                     )
                 # TODO mask out children that are none
                 # print("Actions", action_dist, "vals", value)
@@ -375,29 +411,31 @@ class AlphaGo():
                 # print("Where", simulation_head.state_stack.first_empty_row < self.config.rows)
 
 
-                print("ORIG", np.argmax(q + u))
+                # print("ORIG", np.argmax(q + u))
                 # TODO - verify we're correctly masking invalid here!
-                print("First empty row, outside", simulation_head.state_stack.first_empty_row)
+                # print("First empty row, outside", simulation_head.state_stack.first_empty_row)
                 action_i = mask_invalid(
                     simulation_head.state_stack.first_empty_row, q + u)
-                print("MASKED", action_i)
+                # print("MASKED", action_i)
                 if action_i is None:
                     # full grid - do next sim
                     break
 
                 # Update choice of action
-                print("CURRENT N", simulation_head.N)
+                # print("CURRENT N", simulation_head.N)
                 simulation_head.N[action_i] += 1
-                print("AFTER ACTION", action_i, simulation_head.N)
+                # print("AFTER ACTION", action_i, simulation_head.N)
                 # TODO verify
                 simulation_head.W += value.numpy()[0]
 
-                # TODO - what's broken here
-                next_state, finished = state_obj.hypothetical_step(
-                    player=player, action=action_i)
+                # Play next player, whoever it is
+                next_to_play = simulation_head.state_stack.stack[0, 0, -1]
+                next_state, finished =\
+                    simulation_head.state_stack.hypothetical_step(
+                        player=next_to_play, action=action_i)
 
-                print("NEXT", next_state)
-                print("FINISHED", finished)
+                # print("NEXT", next_state)
+                # print("FINISHED", finished)
                 # state_obj.is_finished()
 
                 # Create the child if this is the first time and not full col
@@ -408,9 +446,11 @@ class AlphaGo():
                         and not finished):
 
                     # TODO should copy num_rows
-                    child_state = StateStack2(preload_state=next_state)
-                    print("CREATING CHILD STARTING FROM", child_state)
-                    print("CHILD\n", child_state)
+                    # child_state = StateStack2(preload_state=next_state)
+                    child_state = copy.deepcopy(simulation_head.state_stack)
+                    child_state.step(player=next_to_play, action=action_i)
+                    # print("CREATING CHILD STARTING FROM", child_state)
+                    # print("CHILD\n", child_state)
 
                     simulation_head.children[action_i] = Node(
                         self.action_space, child_state)
@@ -418,32 +458,37 @@ class AlphaGo():
                 simulation_head = simulation_head.children[action_i]
                 if simulation_head is None:
                     assert finished  # testing
-                if it == 2:
-                    break
+                else:
+                    last_state = simulation_head.state_stack.get_current_state()
+
+            if last_state is not None:
+                print("Sim", s, "finished in", it, "moves\n", last_state)
 
         # Choose action TODO need to mask invalid actions
         if training:
-            print("Acting on", self.tree.state_stack.stack)
+            # print("Acting on\n", markov_tree.state_stack.get_current_state())
+            # print("Empty rows", markov_tree.state_stack.first_empty_row)
             # print("Tree probs", self.tree.N)
             cooled_probs = np.where(
-                self.tree.N > 0, self.tree.N ** self.inverse_tau, 0.)
-            print("COOLED", cooled_probs)
+                markov_tree.N > 0, markov_tree.N ** self.inverse_tau, 0.)
+            # print("COOLED", cooled_probs)
             action = mask_invalid(
-                self.tree.state_stack.first_empty_row, cooled_probs,
+                markov_tree.state_stack.first_empty_row, cooled_probs,
                 stochastic=True)
             sample = cooled_probs
         else:
             action = int(
                 mask_invalid(
-                    self.tree.state_stack.first_empty_row, self.tree.N))
-            sample = self.tree.N
+                    markov_tree.state_stack.first_empty_row, markov_tree.N))
+            sample = markov_tree.N
 
         # Keep subtree for subsequent moves
         # TODO - verify - is this what's meant by keep rest of tree for
         # further calcs? It's None when we get to a leaf, btw
-        self.tree = self.tree.children[int(action)] or Node(
-            self.action_space, StateStack2(*self.state_shape)
-        )
+
+        # self.tree = self.tree.children[int(action)] or Node(
+        #     self.action_space, StateStack2(*self.state_shape)
+        # )
 
         return action, sample
 
@@ -494,8 +539,9 @@ class AlphaGo():
                 assert np.all(init_state == init_state_copy)
 
                 # Update the stack to keep the history
-                print("Player", player, "playing", action)
-                print("BEFORE\n", game_state_stack.get_current_state())
+                # print("Player", player, "playing", action)
+                # print("Game stack in training function\n",
+                #       game_state_stack.get_current_state())
                 done, reward = game_state_stack.step(player=player, action=action)
 
                 def diagnose_env():
@@ -517,17 +563,19 @@ class AlphaGo():
 
                 # player 2 plays - random
                 if not done:
-                    print("PLAYING PLAYER 2")
+                    # print("PLAYING PLAYER 2")
                     # TODO - use train_against.act()
                     valid_acts = [
                         i for i, v in enumerate(
                             game_state_stack.first_empty_row)
                         if v < game_state_stack.num_rows
                     ]
+                    rand_p2_act = np.random.choice(valid_acts)
                     done, p2_reward = game_state_stack.step(
                         player=(player + 1) % 2,
-                        action=int(np.random.choice(valid_acts))
+                        action=int(rand_p2_act)
                     )
+                    # game_state_stack.first_empty_row[rand_p2_act] += 
                     if p2_reward == 1:
                         reward = -1.
                     elif p2_reward == 0:
@@ -552,10 +600,9 @@ class AlphaGo():
                 # game_rewards.append(reward)
                 self.memory.append((init_state, search_probs, reward))
 
-
-                # TODO current_state is not updating after step
-                print("CURRENT STATE", game_idx, stp)
-                print(game_state_stack.get_current_state())
+                # print("CURRENT STATE", game_idx, stp)
+                # print("First empty: ", game_state_stack.first_empty_row)
+                # print(game_state_stack.get_current_state())
                 # print("ENV STATE")
                 # new_grid = self.obs_to_grid(next_obs["board"])
                 # print(new_grid)
@@ -630,13 +677,16 @@ class AlphaGo():
 
     def load_from_state_dict(self, filename="model_state_dict.pt"):
         print(f"Loading model from state dict {filename}")
-        self.model = FFDNN(self.state_len, self.action_range)
+        depth = (self.move_history + 1) * 2 + 1
+        self.model = FFDNN(self.state_shape + (depth,), self.action_space)
         state_dict = tc.load(filename)
         self.model.load_state_dict(state_dict)
         self.model.eval()
 
 
 if __name__ == "__main__":
+
+    print("Warning: not keeping subtree yet")
 
     # View init
     env = ConnectX()  # , {"rows": 4, "columns": 4}, debug=True)
@@ -646,8 +696,8 @@ if __name__ == "__main__":
     model_name = "alphazero.pt"
     state_dict_name = "model_state_dict_alphazero.pt"
 
-    num_training_loops = 2000
-    evaluate_after = 100
+    num_training_loops = 2 # 2000
+    evaluate_after = 1 #  100
     current_best_agent = "random"  # AlphaGo(env)  # random
 
     # Train, player 1 against random
@@ -668,8 +718,9 @@ if __name__ == "__main__":
                     # TODO update current best to this agent
                     pass
 
-        agent.save(model_name)
-        agent.save_state_dict(state_dict_name)
+        # SKIP saving
+        # agent.save(model_name)
+        # agent.save_state_dict(state_dict_name)
 
     else:
         # safer, doesn't require file reference
