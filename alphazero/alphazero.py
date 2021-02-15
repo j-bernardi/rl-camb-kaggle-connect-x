@@ -198,11 +198,10 @@ class StateStack2():
 
     def step(self, player, action):
         act_tuple = self.shared_step(player, action)
-
+        print("ACT TUPLE", act_tuple)
         # TODO - this needs to be hypothetical
         # Make an env and replace the gameboard arrays with current...
         new_obs = self.env.step(act_tuple)
-        
 
         done = (
             self.env.state[player]["status"] == "DONE"
@@ -212,10 +211,9 @@ class StateStack2():
         if self.env.state[player]["status"] == "DONE":
             assert self.env.state[(player + 1) % 2]["status"] == "DONE"
 
-        print("NEW OBS")
+        print("NEW OBS, done:", done)
         new_obs_as_grid = self.obs_to_grid(new_obs[0]["observation"]["board"])
         print(new_obs_as_grid)
-        
         assert (
             new_obs[0]["observation"]["board"]
             == new_obs[1]["observation"]["board"])
@@ -265,6 +263,12 @@ class StateStack2():
             ret += f"\nWith player {(self.stack[0, 0, -1] + 1) % 2} to play"
         return ret
 
+    def get_current_state(self):
+        return (
+                self.stack[:, :, 0]
+                + 2 * self.stack[:, :, self.player_stack_size]
+            )
+
 
 class AlphaGo():
 
@@ -306,7 +310,7 @@ class AlphaGo():
         return tc.sum(tc.mul(self.softmax(pi), self.log_softmax(p)))
 
     def obs_to_grid(self, obs):
-        return tc.reshape(
+        return np.reshape(
             obs,
             (self.config.rows, self.config.columns)
         )
@@ -473,10 +477,9 @@ class AlphaGo():
             )
 
             done = False
-
+            stp = 0
             while not done:
-                # print("i", i); i += 1
-                # print("Gamestate\n", game_state_stack)
+                current_state = game_state_stack.stack
                 try:
                     action, search_probs = self.act(game_state_stack)
                 except TypeError as te:
@@ -485,7 +488,11 @@ class AlphaGo():
                     raise te
 
                 # Next obs, info not needed
-                _, reward, done, _ = trainer.step(int(action))
+                next_obs, reward, done, _ = trainer.step(int(action))
+
+                # game_rewards.append(reward)
+                self.memory.append(
+                    (current_state, search_probs, reward))
 
                 if reward is None:
                     # DIAGNOSE
@@ -495,14 +502,18 @@ class AlphaGo():
                     print("Done?", done)
                     sys.exit()
 
-                # game_rewards.append(reward)
-                self.memory.append(
-                    (game_state_stack.stack, search_probs, reward))
-
                 # Update the stack to keep the history
-                game_state_stack.step(
-                    player=player, action=action
-                )
+                game_state_stack.step(player=player, action=action)
+
+                # TODO current_state is not updating after step
+                print("CURRENT STATE", game_idx, stp)
+                print(game_state_stack.get_current_state())
+                print("ENV STATE")
+                new_grid = self.obs_to_grid(next_obs["board"])
+                print(new_grid)
+
+                assert np.all(game_state_stack.get_current_state() == next_obs)
+                stp += 1
 
             if render:
                 print("Game", game_idx)
